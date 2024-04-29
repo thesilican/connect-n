@@ -1,7 +1,7 @@
 use std::io;
 
 fn main() {
-    test_game(7, 8, 4);    
+    test_game(3, 3, 3);    
 }
 
 enum CountTypes {
@@ -66,7 +66,8 @@ struct Board {
 }
 
 trait ConnectN {
-    fn is_column_full(&self, col: usize) -> bool; // when the user is hovering over a column that's full, gray it out
+    fn column_is_full(&self, col: usize) -> bool; // when the user is hovering over a column that's full, gray it out
+    fn board_is_full(&self) -> bool; // used to determine tie
     fn place_token(&mut self, col: usize);
     fn detect_win(&self) -> u32; // returns winner's player num (1/2), else 0
 
@@ -75,15 +76,24 @@ trait ConnectN {
 }
 
 impl ConnectN for Board {
-    fn is_column_full(&self, col: usize) -> bool {
+    fn column_is_full(&self, col: usize) -> bool {
         if col >= self.c {
             return false;
         }
         self.column_tops[col] >= self.r
     }
 
+    fn board_is_full(&self) -> bool {
+        for i in 0..self.c {
+            if !self.column_is_full(i) {
+                return false;
+            }
+        }
+        true
+    }
+
     fn place_token(&mut self, col: usize) {
-        if col >= self.c || self.is_column_full(col) {
+        if col >= self.c || self.column_is_full(col) {
             return;
         }
         self.board[self.column_tops[col]][col] = self.turn;
@@ -159,7 +169,7 @@ fn init_board(row: usize, col: usize, connect_n: u32) -> Board {
 fn test_game(row: usize, col: usize, n: u32) {
     let mut b = init_board(row, col, n);
     b.debug_print();
-    while b.detect_win() == 0 {
+    while b.detect_win() == 0 && !b.board_is_full() {
         println!("Player {} turn: ", b.turn);
 
         let mut valid_index: bool = false;
@@ -184,5 +194,9 @@ fn test_game(row: usize, col: usize, n: u32) {
         b.debug_print();
     }
     
-    println!("Winner is player {}!", b.detect_win());
+    if b.detect_win() != 0 {
+        println!("Winner is player {}!", b.detect_win());
+    } else {
+        println!("Game ended in tie.");
+    }  
 }
