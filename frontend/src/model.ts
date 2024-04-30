@@ -10,6 +10,11 @@ export class ConnectN {
   winCell: Vec2 | null;
   winDirection: Vec2 | null;
   toMove: Tile;
+  isTie: boolean;
+
+  get gameOver() {
+    return this.winCell !== null || this.isTie;
+  }
 
   constructor(width: number, height: number, winLength: number) {
     this.dim = new Vec2(width, height);
@@ -25,6 +30,7 @@ export class ConnectN {
     this.winCell = null;
     this.winDirection = null;
     this.toMove = "X";
+    this.isTie = false;
   }
 
   get(x: number, y: number) {
@@ -97,6 +103,19 @@ export class ConnectN {
           }
         }
       }
+    }
+
+    // Check for ties
+    let found = false;
+    for (let i = 0; i < this.dim.x; i++) {
+      for (let j = 0; j < this.dim.y; j++) {
+        if (this.get(i, j) === null) {
+          found = true;
+        }
+      }
+    }
+    if (!found) {
+      this.isTie = true;
     }
   }
 }

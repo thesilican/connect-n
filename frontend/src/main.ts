@@ -4,28 +4,50 @@ import { Canvas, Texture } from "./canvas";
 import { Vec2, clamp } from "./math";
 import cursorPng from "./assets/cursor.png";
 import { ConnectN } from "./model";
+import AiWorker from "./worker?worker";
 
 const cursor = new Texture(cursorPng, 256, 256);
 await cursor.load;
 
 const canvasElement = document.getElementById("canvas") as HTMLCanvasElement;
 const canvas = new Canvas(canvasElement);
+const aiPlaysAs = "O";
+const ai = new AiWorker();
 
 const connectN = new ConnectN(7, 6, 4);
 let fallingPiece: Vec2 | null = null;
 let fallingPieceVelocity = 0;
+let aiThinking = false;
 
 canvasElement.addEventListener("click", () => handleClick());
+ai.addEventListener("message", (evt) => {
+  console.log("AI Response:", evt.data);
+  handleAiResponse(evt.data);
+});
 
 function handleClick() {
   const { mouseColumn } = calculateSizing();
-  if (connectN.winCell !== null || fallingPiece !== null) {
-    return;
-  }
-  if (connectN.columnHeights[mouseColumn] === connectN.dim.y) {
+  if (
+    connectN.gameOver ||
+    fallingPiece !== null ||
+    connectN.columnHeights[mouseColumn] === connectN.dim.y
+  ) {
     return;
   }
   fallingPiece = new Vec2(mouseColumn, connectN.dim.y);
+  fallingPieceVelocity = 0.1;
+}
+
+function handleAiResponse(column: number) {
+  aiThinking = false;
+  if (
+    connectN.gameOver ||
+    fallingPiece !== null ||
+    connectN.columnHeights[column] === connectN.dim.y
+  ) {
+    return;
+  }
+  fallingPiece = new Vec2(column, connectN.dim.y);
   fallingPieceVelocity = 0.1;
 }
 
@@ -58,10 +80,21 @@ function tick() {
     }
   }
 
+  // Trigger AI
+  if (
+    !connectN.gameOver &&
+    !aiThinking &&
+    !fallingPiece &&
+    connectN.toMove == aiPlaysAs
+  ) {
+    ai.postMessage(connectN.board);
+    aiThinking = true;
+  }
+
   const { cellSize, leftOffset, topOffset, mouseColumn } = calculateSizing();
 
   // Draw mouse piece
-  if (connectN.winCell === null && fallingPiece == null) {
+  if (!connectN.gameOver && fallingPiece == null) {
     // Draw floating piece
     const color = connectN.toMove === "X" ? "rgb(255, 0, 0)" : "rgb(0, 0, 255)";
     const position = new Vec2(
@@ -138,9 +171,8 @@ function tick() {
     }
   }
 
-  // Draw win state
+  // Draw win line
   if (connectN.winCell !== null && connectN.winDirection !== null) {
-    // Draw win line
     canvas.ctx.lineWidth = cellSize / 10;
     canvas.ctx.lineCap = "round";
     canvas.ctx.strokeStyle = "#fff";
@@ -163,9 +195,13 @@ function tick() {
 
   // Draw status text
   let message: string;
-  if (connectN.winCell) {
+  if (connectN.winCell !== null) {
     const winner = connectN.get(connectN.winCell.x, connectN.winCell.y);
     message = winner === "X" ? "Red wins!" : "Blue wins!";
+  } else if (connectN.isTie) {
+    message = "It's a tie!";
+  } else if (aiThinking) {
+    message = "Thinking...";
   } else {
     message = `Connect ${connectN.winLength} (${connectN.dim.x}\u00D7${connectN.dim.y})`;
   }
