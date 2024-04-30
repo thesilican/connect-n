@@ -1,81 +1,19 @@
 use std::io;
 
 fn main() {
-    test_game(3, 3, 3);    
-}
-
-enum CountTypes {
-    H,
-    V,
-    PosDiag,
-    NegDiag
-}
-
-struct ConnectCounts {
-    row: usize,
-    col: usize,
-    h: Vec<Vec<u32>>,
-    v: Vec<Vec<u32>>,
-    pos_diag: Vec<Vec<u32>>,
-    neg_diag: Vec<Vec<u32>>
-}
-
-trait SafeCountsIndexing {
-    fn get(&self, count_type: CountTypes, i: i32, j: i32) -> u32;
-}
-
-impl SafeCountsIndexing for ConnectCounts {
-    fn get(&self, count_type: CountTypes, i: i32, j: i32) -> u32 {
-        if i < 0 || j < 0 {
-            return 0;
-        }
-        let i_s = i as usize;
-        let j_s = j as usize;
-
-        if i_s >= self.row || j_s >= self.col {
-            return 0;
-        }
-
-        match count_type {
-            CountTypes::H => self.h[i_s][j_s],
-            CountTypes::V => self.v[i_s][j_s],
-            CountTypes::PosDiag => self.pos_diag[i_s][j_s],
-            CountTypes::NegDiag => self.neg_diag[i_s][j_s]
-        }
-    }
-}
-
-fn init_counts(r: usize, c: usize) -> ConnectCounts {
-    ConnectCounts {
-        row: r,
-        col: c,
-        h: vec![vec![0; c]; r],
-        v: vec![vec![0; c]; r],
-        pos_diag: vec![vec![0; c]; r],
-        neg_diag: vec![vec![0; c]; r],
-    }
+    test_game(3,3,3);  
 }
 
 struct Board {
     r: usize,
     c: usize,
-    n: u32,
+    n: usize,
     turn: u32,
-    board: Vec<Vec<u32>>, // 0-empty and 1/2-tokens (assume 1 goes first), bottom row of board is row 0, left-most col is col 0
+    board: Vec<u32>, // 0-empty and 1/2-tokens (assume 1 goes first), bottom row of board is row 0, left-most col is col 0
     column_tops: Vec<usize> // index of first free slot in column (starts at 0)
 }
 
-trait ConnectN {
-    fn column_is_full(&self, col: usize) -> bool; // when the user is hovering over a column that's full, gray it out
-    fn board_is_full(&self) -> bool; // used to determine tie
-    fn place_token(&mut self, col: usize);
-    fn detect_win(&self) -> u32; // returns winner's player num (1/2), else 0
-
-    // debug functions
-    fn debug_print(&self);
-}
-
-impl ConnectN for Board {
+impl Board {
     fn column_is_full(&self, col: usize) -> bool {
         if col >= self.c {
             return false;
@@ -96,7 +34,7 @@ impl ConnectN for Board {
         if col >= self.c || self.column_is_full(col) {
             return;
         }
-        self.board[self.column_tops[col]][col] = self.turn;
+        self.board[self.column_tops[col]*self.c + col] = self.turn;
         self.column_tops[col] += 1;
 
         if self.turn == 1 {
@@ -106,32 +44,179 @@ impl ConnectN for Board {
         }
     }
 
+    // returns winner's player num (1/2), else 0
     fn detect_win(&self) -> u32 {
-        let mut counts_1 = init_counts(self.r, self.c);
-        let mut counts_2 = init_counts(self.r, self.c);
+        //horiz
+        for r in 0..self.r {
+            let mut one = 0;
+            let mut two = 0;
+            for c in 0..self.c {
+                if self.board[r*self.c + c] == 1 {
+                    one += 1;
+                    two = 0;
+                } else if self.board[r*self.c + c] == 2 {
+                    two += 1;
+                    one = 0;
+                } else {
+                    one = 0;
+                    two = 0;
+                }
 
-        for i in 0..self.r {
-            for j in 0..self.c {
-                let i_32 = i as i32;
-                let j_32 = j as i32;
+                if one >= self.n {
+                    return 1;
+                } else if two >= self.n {
+                    return 2;
+                }
+            }
+        }
 
-                if self.board[i][j] == 1 {
-                    counts_1.h[i][j] = 1 + counts_1.get(CountTypes::H, i_32, j_32-1);
-                    counts_1.v[i][j] = 1 + counts_1.get(CountTypes::V, i_32-1, j_32);
-                    counts_1.pos_diag[i][j] = 1 + counts_1.get(CountTypes::PosDiag, i_32-1, j_32-1);
-                    counts_1.neg_diag[i][j] = 1 + counts_1.get(CountTypes::NegDiag, i_32-1, j_32+1);
+        //vert
+        for c in 0..self.c {
+            let mut one = 0;
+            let mut two = 0;
+            for r in 0..self.r {
+                if self.board[r*self.c + c] == 1 {
+                    one += 1;
+                    two = 0;
+                } else if self.board[r*self.c + c] == 2 {
+                    two += 1;
+                    one = 0;
+                } else {
+                    one = 0;
+                    two = 0;
+                }
 
-                    if counts_1.h[i][j] == self.n || counts_1.v[i][j] == self.n || counts_1.pos_diag[i][j] == self.n || counts_1.neg_diag[i][j] == self.n {
-                        return 1;
+                if one >= self.n {
+                    return 1;
+                } else if two >= self.n {
+                    return 2;
+                }
+            }
+        }
+
+        //pos diag x axis
+        if 0 <= self.c as i32 - self.n as i32 {
+            for c in 0..(self.c - self.n + 1) {
+                let mut i = 0;
+                let mut one = 0;
+                let mut two = 0;
+                loop {
+                    if self.board[i*self.c + c+i] == 1 {
+                        one += 1;
+                        two = 0;
+                    } else if self.board[i*self.c + c+i] == 2 {
+                        two += 1;
+                        one = 0;
+                    } else {
+                        one = 0;
+                        two = 0;
                     }
-                } else if self.board[i][j] == 2 {
-                    counts_2.h[i][j] = 1 + counts_2.get(CountTypes::H, i_32, j_32-1);
-                    counts_2.v[i][j] = 1 + counts_2.get(CountTypes::V, i_32-1, j_32);
-                    counts_2.pos_diag[i][j] = 1 + counts_2.get(CountTypes::PosDiag, i_32-1, j_32-1);
-                    counts_2.neg_diag[i][j] = 1 + counts_2.get(CountTypes::NegDiag, i_32-1, j_32+1);
 
-                    if counts_2.h[i][j] == self.n || counts_2.v[i][j] == self.n || counts_2.pos_diag[i][j] == self.n || counts_2.neg_diag[i][j] == self.n {
+                    if one >= self.n {
+                        return 1;
+                    } else if two >= self.n {
                         return 2;
+                    }
+
+                    i += 1;
+                    if i >= self.r || c + i >= self.c {
+                        break;
+                    }
+                }
+            }
+        }
+
+        //pos diag y axis
+        if 1 <= self.r as i32 - self.n as i32 {
+            for r in 1..(self.r - self.n + 1) {
+                let mut i = 0;
+                let mut one = 0;
+                let mut two = 0;
+                loop {
+                    if self.board[(r+i)*self.c + i] == 1 {
+                        one += 1;
+                        two = 0;
+                    } else if self.board[(r+i)*self.c + i] == 2 {
+                        two += 1;
+                        one = 0;
+                    } else {
+                        one = 0;
+                        two = 0;
+                    }
+
+                    if one >= self.n {
+                        return 1;
+                    } else if two >= self.n {
+                        return 2;
+                    }
+
+                    i += 1;
+                    if r + i >= self.r || i >= self.c {
+                        break;
+                    }
+                }
+            }
+        }
+
+        //neg diag x axis
+        if self.n as i32 - 1 >= 0 {
+            for c in (self.n-1)..self.c {
+                let mut i = 0;
+                let mut one = 0;
+                let mut two = 0;
+                loop {
+                    if self.board[i*self.c + c-i] == 1 {
+                        one += 1;
+                        two = 0;
+                    } else if self.board[i*self.c + c-i] == 2 {
+                        two += 1;
+                        one = 0;
+                    } else {
+                        one = 0;
+                        two = 0;
+                    }
+
+                    if one >= self.n {
+                        return 1;
+                    } else if two >= self.n {
+                        return 2;
+                    }
+
+                    i += 1;
+                    if i >= self.r || (c as i32) - (i as i32) < 0 {
+                        break;
+                    }
+                }
+            }
+        }
+
+        //neg diag y axis
+        if 1 <= self.r as i32 - self.n as i32 {
+            for r in 1..(self.r - self.n + 1) {
+                let mut i = 0;
+                let mut one = 0;
+                let mut two = 0;
+                loop {
+                    if self.board[(r+i)*self.c + (self.c - 1 - i)] == 1 {
+                        one += 1;
+                        two = 0;
+                    } else if self.board[(r+i)*self.c + (self.c - 1 - i)] == 2 {
+                        two += 1;
+                        one = 0;
+                    } else {
+                        one = 0;
+                        two = 0;
+                    }
+
+                    if one >= self.n {
+                        return 1;
+                    } else if two >= self.n {
+                        return 2;
+                    }
+
+                    i += 1;
+                    if r + i >= self.r || (self.c as i32) - 1 - (i as i32) < 0 {
+                        break;
                     }
                 }
             }
@@ -141,9 +226,9 @@ impl ConnectN for Board {
     }
 
     fn debug_print(&self) {
-        for row in self.board.iter().rev() {
-            for &element in row {
-                print!("{} ", element)
+        for r in (0..self.r).rev() {
+            for c in 0..self.c {
+                print!("{} ", self.board[r*self.c + c]);
             }
             println!("");
         }
@@ -155,18 +240,18 @@ impl ConnectN for Board {
     }
 }
 
-fn init_board(row: usize, col: usize, connect_n: u32) -> Board {
+fn init_board(row: usize, col: usize, n: usize) -> Board {
     Board {
         r: row,
         c: col,
-        n: connect_n,
+        n: n,
         turn: 1,
-        board: vec![vec![0; col]; row],
+        board: vec![0; col*row],
         column_tops: vec![0; col]
     }
 }
 
-fn test_game(row: usize, col: usize, n: u32) {
+fn test_game(row: usize, col: usize, n: usize) {
     let mut b = init_board(row, col, n);
     b.debug_print();
     while b.detect_win() == 0 && !b.board_is_full() {
