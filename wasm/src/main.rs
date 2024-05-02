@@ -4,7 +4,7 @@ use std::cmp::min;
 use std::time::Instant;
 
 fn main() {
-    test_bot2(6,7,4);
+    test_bot(6,7,4);
 }
 
 fn sort_tuples(tuples: &mut Vec<(usize, usize, usize, usize)>) {
@@ -115,6 +115,9 @@ impl Board {
             ans = ans_cand;
             ans_count = 1;
         }
+        if ans >= self.n {
+            return (ans,1);
+        }
 
         buffer = 0;
         ans_cand = 0;
@@ -171,6 +174,9 @@ impl Board {
                 ans_count = 1;
             }
         }
+        if ans >= self.n {
+            return (ans,1);
+        }
 
         buffer = 0;
         ans_cand = 0;
@@ -226,6 +232,9 @@ impl Board {
                 ans = ans_cand;
                 ans_count = 1;
             }
+        }
+        if ans >= self.n {
+            return (ans,1);
         }
 
         buffer = 0;
@@ -744,7 +753,7 @@ fn test_bot2(r: usize, c: usize, n: usize) {
         b.revs = 0;
         
         let start = Instant::now();
-        let bot_move = b.minimax_driver(15, -9999, 9999);
+        let bot_move = b.minimax_driver(14, -9999, 9999);
         let end = Instant::now();
         let d = end-start;
         println!("Bot speed: {:?} @ {} states/s", d, (b.revs as f64 / (d.as_secs() as f64 + d.subsec_nanos() as f64 * 1e-9)).floor());
