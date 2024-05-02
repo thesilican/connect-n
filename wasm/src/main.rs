@@ -4,7 +4,7 @@ use std::cmp::min;
 use std::time::Instant;
 
 fn main() {
-    test_bot(6,7,4);
+    test_bot4();
 }
 
 fn sort_tuples(tuples: &mut Vec<(usize, usize, usize, usize)>) {
@@ -657,6 +657,209 @@ fn init_board(r: usize, c: usize, n: usize) -> Board {
     }
 }
 
+struct Board4 {
+    cur_player: u64,
+    non_empty: u64
+}
+
+impl Board4 {
+    fn copy(&self) -> Board4 {
+        Board4 {
+            cur_player: self.cur_player,
+            non_empty: self.non_empty
+        }
+    }
+
+    fn get_key(&self) -> u64 {
+        static LOWER_ONES : u64 = 0b0000001000000100000010000001000000100000010000001;
+        self.cur_player + self.non_empty + LOWER_ONES
+    }
+
+    fn column_is_full(&self, c: usize) -> bool {
+        ((0b100000 << (6-c)*7) & self.non_empty) != 0
+    }
+
+    fn place_token(&mut self, c: usize) {
+        self.cur_player ^= self.non_empty;
+        self.non_empty |= self.non_empty + (1 << (6-c)*7);
+    }
+
+    fn board_is_full(&self) -> bool {
+        self.non_empty == 0b0111111011111101111110111111011111101111110111111
+    }
+
+    fn detect_win(&self) -> bool {
+        let prev = self.cur_player ^ self.non_empty;
+        //vert
+        let mut temp : u64 = prev & (prev << 1);
+        if temp & (temp << 2) != 0 {
+            return true;
+        }
+
+        //horiz
+        temp = prev & (prev << 7);
+        if temp & (temp << 14) != 0 {
+            return true;
+        }
+
+        //pos diag
+        temp = prev & (prev << 6);
+        if temp & (temp << 12) != 0 {
+            return true;
+        }
+
+        //neg diag
+        temp = prev & (prev << 8);
+        if temp & (temp << 16) != 0 {
+            return true;
+        }
+
+        false
+    }
+
+    fn debug_print(&self, cur_player: char, op: char) {
+        let mut board = vec![vec![' '; 7]; 6];
+        let mut temp_cur = self.cur_player;
+        let mut temp_all = self.non_empty;
+
+        for c in (0..7).rev() {
+            for r in 0..6 {
+                if (temp_all & 1) == 0 {
+                    temp_cur >>= 1;
+                    temp_all >>= 1;
+                    continue;
+                }
+
+                if (temp_cur & 1) == 1 {
+                    board[r][c] = cur_player;
+                } else {
+                    board[r][c] = op;
+                }
+
+                temp_cur >>= 1;
+                temp_all >>= 1;
+            }
+            temp_cur >>= 1;
+            temp_all >>= 1;
+        }
+
+        for r in (0..6).rev() {
+            print!("{} ",r);
+            for c in 0..7 {
+                print!("{} ", board[r][c]);
+            }
+            println!("");
+        }
+        print!("  ");
+        for i in 0..7 {
+            print!("{} ", i);
+        }
+        println!("");
+    }  
+
+    fn minimax(&mut self, depth: u32, isMaximizer: i32, mut alpha: i32, mut beta: i32) -> i32 {     
+        if depth == 0 {           
+            return 0;
+        }
+
+        static MOVE_ORDERING : [usize; 7] = [3,2,4,1,5,0,6];
+
+        let mut bestVal = -9999*isMaximizer;
+        for i in MOVE_ORDERING {
+            if self.column_is_full(i) {
+                continue;
+            }
+            let mut b = self.copy();
+            b.place_token(i);
+            if b.detect_win() {
+                return 100*isMaximizer;
+            }
+            if b.board_is_full() {
+                return 0;
+            }
+
+            let mut skip_move = false;
+            for j in MOVE_ORDERING {
+                if self.column_is_full(j) {
+                    continue;
+                }
+                let mut b2 = b.copy();
+                b2.place_token(j);
+                if b2.detect_win() {
+                    skip_move = true;
+                    break;
+                }
+            }
+            if skip_move {
+                continue;
+            }
+
+            if isMaximizer == 1 {
+                bestVal = max(bestVal, b.minimax(depth-1, -1, alpha, beta));
+                alpha = max(alpha, bestVal);
+            } else {
+                bestVal = min(bestVal, b.minimax(depth-1, 1, alpha, beta));
+                beta = min(beta, bestVal);
+            }
+                        
+            if beta <= alpha {
+                break;
+            }
+        }
+
+        bestVal
+    }
+
+    fn minimax_driver(&mut self, depth: u32, mut alpha: i32, beta: i32) -> usize {
+        let mut bestVal = -9999;
+        let mut col = 0;
+        static MOVE_ORDERING : [usize; 7] = [3,2,4,1,5,0,6];
+
+        for i in MOVE_ORDERING {
+            if self.column_is_full(i) {
+                continue;
+            }
+            let mut b = self.copy();
+            b.place_token(i);
+            if b.detect_win() {
+                return i;
+            }
+            if b.board_is_full() {
+                return i;
+            }
+
+            let mut skip_move = false;
+            for j in MOVE_ORDERING {
+                if b.column_is_full(j) {
+                    continue;
+                }
+                let mut b2 = b.copy();
+                b2.place_token(j);
+                if b2.detect_win() {
+                    skip_move = true;
+                    break;
+                }
+            }
+            if skip_move {
+                continue;
+            }
+
+            let value = b.minimax(depth-1, -1, alpha, beta);
+            if value > bestVal {
+                col = i;
+                bestVal = value;
+            }
+            alpha = max(alpha, bestVal);
+            
+            if beta <= alpha {
+                break;
+            }
+        }
+
+        col
+    }
+}
+
 fn test_game(r: usize, c: usize, n: usize) {
     let mut b = init_board(r, c, n);
     b.debug_print();
@@ -740,6 +943,63 @@ fn test_bot(r: usize, c: usize, n: usize) {
     
     if b.detect_win() != 0 {
         println!("Winner is player {}!", b.detect_win());
+    } else {
+        println!("Game ended in tie.");
+    }  
+}
+
+fn test_bot4() {
+    let mut b = Board4 {
+        cur_player: 0,
+        non_empty: 0
+    };
+    b.debug_print('X', 'O');
+    let mut winner = 'X';
+    while !b.detect_win() && !b.board_is_full() {
+        println!("Player turn: ");
+
+        let mut valid_index: bool = false;
+        let mut col : i32 = 0;
+
+        while !valid_index {
+            let mut inp_c = String::new();
+            io::stdin()
+                .read_line(&mut inp_c)
+                .expect("Failed to read line");
+
+            col = inp_c.trim().parse().expect("enter a number");
+
+            if col < 0 || col >= 7 {
+                println!("index out of range");
+            } else {
+                valid_index = true;
+            }
+        }
+
+        if b.column_is_full(col as usize) {
+            continue;
+        }
+
+        b.place_token(col as usize);
+        b.debug_print('O', 'X');
+        if b.detect_win() || b.board_is_full() {
+            winner = 'X';
+            break;
+        }
+        
+        let start = Instant::now();
+        let bot_move = b.minimax_driver(16, -9999, 9999);
+        let end = Instant::now();
+        let d = end - start;
+        println!("Bot speed: {:?}", d);
+        println!("Bot move: {}", bot_move);
+        b.place_token(bot_move);
+        b.debug_print('X', 'O');
+        winner = 'O';
+    }
+    
+    if b.detect_win() {
+        println!("Winner is player {}!", winner);
     } else {
         println!("Game ended in tie.");
     }  
