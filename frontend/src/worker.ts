@@ -8,8 +8,7 @@ self.addEventListener("message", (evt) => {
   );
 
   const int32Array = new Int32Array(board);
-  const response = bot(int32Array, 20);
+  const response = bot(int32Array, 19);
 
-  // Simulate a delay
   self.postMessage(response);
 });
