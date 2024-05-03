@@ -4,7 +4,7 @@ use std::cmp::min;
 use std::time::Instant;
 
 fn main() {
-    test_bot42(17);
+    test_bot4(19);
 }
 
 fn sort_tuples(tuples: &mut Vec<(usize, usize, usize, usize)>) {
