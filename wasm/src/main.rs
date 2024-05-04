@@ -4,7 +4,7 @@ use std::cmp::min;
 use std::time::Instant;
 
 fn main() {
-    test_bot42(19);
+    test_bot4(19);
 }
 
 fn sort_tuples(tuples: &mut Vec<(usize, usize, usize, usize)>) {
@@ -89,13 +89,7 @@ impl Board4 {
     fn detect_sequence(&self, c: usize) -> (usize, usize) {
         let prev = self.cur_player ^ self.non_empty;
 
-        // calculate r
-        let mut r : usize = 0;
-        let mut col_bottom = self.get_lower_one(c) << 1;
-        while (col_bottom & self.non_empty) != 0 {
-            col_bottom <<= 1;
-            r += 1;
-        }
+        let r = (self.non_empty >> (6-c)*7).trailing_ones() as usize - 1;
 
         let mut ans = 0;
         let mut ans_count = 0;
@@ -375,7 +369,7 @@ impl Board4 {
     fn minimax(&mut self, depth: u32, isMaximizer: i32, mut alpha: i32, mut beta: i32, revs: &mut u64, table: &mut Vec<(u64,i32)>) -> i32 {     
         *revs += 1;
 
-        let table_val = table[(self.get_key() % 10000000) as usize];
+        let table_val = table[(self.get_key() % 100000000) as usize];
         if table_val.0 == self.get_key() {
             return table_val.1;
         }
@@ -396,7 +390,7 @@ impl Board4 {
             b.place_token(i);
             let p = b.detect_sequence(i);
             if p.0 >= 4 {
-                table[(self.get_key() % 10000000) as usize] = (self.get_key(), 100*isMaximizer);
+                table[(self.get_key() % 100000000) as usize] = (self.get_key(), 100*isMaximizer);
                 return 100*isMaximizer;
             }
             if b.board_is_full() {
@@ -444,13 +438,13 @@ impl Board4 {
         }
 
         if bestVal != 0 {
-            table[(self.get_key() % 10000000) as usize] = (self.get_key(), bestVal);
+            table[(self.get_key() % 100000000) as usize] = (self.get_key(), bestVal);
         }
 
         bestVal
     }
 
-    fn minimax_driver(&mut self, depth: u32, mut alpha: i32, beta: i32, revs: &mut u64, table: &mut Vec<(u64,i32)>) -> usize {
+    fn minimax_driver(&mut self, depth: u32, mut alpha: i32, beta: i32, revs: &mut u64, table: &mut Vec<(u64,i32)>) -> (usize, i32) {
         *revs += 1;
         let mut bestVal = -100;
         let mut col = 0;
@@ -468,10 +462,10 @@ impl Board4 {
             b.place_token(i);
             let p = b.detect_sequence(i);
             if p.0 >= 4 {
-                return i;
+                return (i,100);
             }
             if b.board_is_full() {
-                return i;
+                return (i,0);
             }
 
             final_order.push((p.0, p.1, center_heuristic as usize, i));
@@ -513,15 +507,15 @@ impl Board4 {
         }
 
         if self.column_is_full(col) {
-            return free_col;
+            return (free_col, bestVal);
         } else {
-            return col;
+            return (col, bestVal);
         }
     }
 }
 
 fn test_bot4(depth: u32) {
-    let mut table = vec![(0 as u64, 0 as i32); 10000000];
+    let mut table = vec![(0 as u64, 0 as i32); 100000000];
 
     let mut b = Board4 {
         cur_player: 0,
@@ -566,9 +560,9 @@ fn test_bot4(depth: u32) {
         let bot_move = b.minimax_driver(depth, -100, 100, &mut revs, &mut table);
         let end = Instant::now();
         let d = end - start;
-        println!("Bot speed: {:?} @ {} states/s", d, (revs as f64 / (d.as_secs() as f64 + d.subsec_nanos() as f64 * 1e-9)).floor());
-        println!("Bot move: {}", bot_move);
-        b.place_token(bot_move);
+        println!("Bot speed: {:?} @ {} states/s, eval {}", d, (revs as f64 / (d.as_secs() as f64 + d.subsec_nanos() as f64 * 1e-9)).floor(), bot_move.1);
+        println!("Bot move: {}", bot_move.0);
+        b.place_token(bot_move.0);
         b.debug_print('X', 'O');
         winner = 'O';
     }
@@ -581,7 +575,7 @@ fn test_bot4(depth: u32) {
 }
 
 fn test_bot42(depth: u32) {
-    let mut table = vec![(0 as u64, 0 as i32); 10000000];
+    let mut table = vec![(0 as u64, 0 as i32); 100000000];
 
     let mut b = Board4 {
         cur_player: 0,
@@ -596,8 +590,8 @@ fn test_bot42(depth: u32) {
         let end = Instant::now();
         let d = end - start;
         println!("Bot speed: {:?} @ {} states/s", d, (revs as f64 / (d.as_secs() as f64 + d.subsec_nanos() as f64 * 1e-9)).floor());
-        println!("Bot move: {}", bot_move);
-        b.place_token(bot_move);
+        println!("Bot move: {}", bot_move.0);
+        b.place_token(bot_move.0);
         b.debug_print('O', 'X');
         if b.detect_win() || b.board_is_full() {
             winner = 'X';

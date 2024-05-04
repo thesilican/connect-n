@@ -68,7 +68,7 @@ pub fn bot(v: Vec<i32>, depth: u32) -> i32 {
         cur_player: cur,
         non_empty: nonempty
     };
-    let mut table = vec![(0 as u64, 0 as i32); 10000000];
+    let mut table = vec![(0 as u64, 0 as i32); 100000000];
     let mut revs : u64 = 0;
     b.minimax_driver(depth, -100, 100, &mut revs, &mut table) as i32
 }
@@ -156,13 +156,7 @@ impl Board4 {
     fn detect_sequence(&self, c: usize) -> (usize, usize) {
         let prev = self.cur_player ^ self.non_empty;
 
-        // calculate r
-        let mut r : usize = 0;
-        let mut col_bottom = self.get_lower_one(c) << 1;
-        while (col_bottom & self.non_empty) != 0 {
-            col_bottom <<= 1;
-            r += 1;
-        }
+        let r = (self.non_empty >> (6-c)*7).trailing_ones() as usize - 1;
 
         let mut ans = 0;
         let mut ans_count = 0;
