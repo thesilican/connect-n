@@ -1,8 +1,8 @@
-use wasm_bindgen::prelude::*;
-use std::io;
 use std::cmp::max;
 use std::cmp::min;
+use std::io;
 use std::time::Instant;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 extern "C" {
@@ -49,8 +49,8 @@ pub fn bot(v: Vec<i32>, depth: u32) -> i32 {
         }
     }
 
-    let mut cur : u64 = 0;
-    let mut nonempty : u64 = 0;
+    let mut cur: u64 = 0;
+    let mut nonempty: u64 = 0;
     for c in 0..7 {
         for r in (0..7).rev() {
             cur <<= 1;
@@ -66,10 +66,10 @@ pub fn bot(v: Vec<i32>, depth: u32) -> i32 {
 
     let mut b = Board4 {
         cur_player: cur,
-        non_empty: nonempty
+        non_empty: nonempty,
     };
     let mut table = vec![(0 as u64, 0 as i32); 100000000];
-    let mut revs : u64 = 0;
+    let mut revs: u64 = 0;
     b.minimax_driver(depth, -100, 100, &mut revs, &mut table) as i32
 }
 
@@ -87,19 +87,19 @@ fn sort_tuples(tuples: &mut Vec<(usize, usize, usize, usize)>) {
 
 struct Board4 {
     cur_player: u64,
-    non_empty: u64
+    non_empty: u64,
 }
 
 impl Board4 {
     fn copy(&self) -> Board4 {
         Board4 {
             cur_player: self.cur_player,
-            non_empty: self.non_empty
+            non_empty: self.non_empty,
         }
     }
 
     fn get_key(&self) -> u64 {
-        static LOWER_ONES : u64 = 0b0000001000000100000010000001000000100000010000001;
+        static LOWER_ONES: u64 = 0b0000001000000100000010000001000000100000010000001;
         self.cur_player + self.non_empty + LOWER_ONES
     }
 
@@ -108,11 +108,11 @@ impl Board4 {
     }
 
     fn get_lower_one(&self, c: usize) -> u64 {
-        1 << (6-c)*7
+        1 << (6 - c) * 7
     }
 
     fn column_is_full(&self, c: usize) -> bool {
-        ((0b100000 << (6-c)*7) & self.non_empty) != 0
+        ((0b100000 << (6 - c) * 7) & self.non_empty) != 0
     }
 
     fn place_token(&mut self, c: usize) {
@@ -127,7 +127,7 @@ impl Board4 {
     fn detect_win(&self) -> bool {
         let prev = self.cur_player ^ self.non_empty;
         //vert
-        let mut temp : u64 = prev & (prev << 1);
+        let mut temp: u64 = prev & (prev << 1);
         if temp & (temp << 2) != 0 {
             return true;
         }
@@ -156,7 +156,7 @@ impl Board4 {
     fn detect_sequence(&self, c: usize) -> (usize, usize) {
         let prev = self.cur_player ^ self.non_empty;
 
-        let r = (self.non_empty >> (6-c)*7).trailing_ones() as usize - 1;
+        let r = (self.non_empty >> (6 - c) * 7).trailing_ones() as usize - 1;
 
         let mut ans = 0;
         let mut ans_count = 0;
@@ -168,11 +168,12 @@ impl Board4 {
         let mut i = 1;
         let mut b = 0;
         loop {
-            if c+i >= 7 || (self.get_pos(r, c+i) & self.cur_player != 0) { //3-player is the other player
+            if c + i >= 7 || (self.get_pos(r, c + i) & self.cur_player != 0) {
+                //3-player is the other player
                 break;
             }
 
-            if (self.get_pos(r, c+i) & prev != 0) && b == 0 {
+            if (self.get_pos(r, c + i) & prev != 0) && b == 0 {
                 ans_cand += 1;
                 if ans_cand >= 4 {
                     break;
@@ -189,11 +190,12 @@ impl Board4 {
         i = 1;
         b = 0;
         loop {
-            if (c as i32) - (i as i32) < 0 || (self.get_pos(r, c-i) & self.cur_player != 0) { //3-player is the other player
+            if (c as i32) - (i as i32) < 0 || (self.get_pos(r, c - i) & self.cur_player != 0) {
+                //3-player is the other player
                 break;
             }
 
-            if (self.get_pos(r, c-i) & prev != 0) && b == 0 {
+            if (self.get_pos(r, c - i) & prev != 0) && b == 0 {
                 ans_cand += 1;
                 if ans_cand >= 4 {
                     break;
@@ -213,7 +215,7 @@ impl Board4 {
             ans_count = 1;
         }
         if ans >= 4 {
-            return (ans,1);
+            return (ans, 1);
         }
 
         buffer = 0;
@@ -223,11 +225,12 @@ impl Board4 {
 
         //vert
         loop {
-            if r+i >= 6 || (self.get_pos(r+i, c) & self.cur_player != 0) { //3-player is the other player
+            if r + i >= 6 || (self.get_pos(r + i, c) & self.cur_player != 0) {
+                //3-player is the other player
                 break;
             }
 
-            if (self.get_pos(r+i, c) & prev != 0) && b == 0 {
+            if (self.get_pos(r + i, c) & prev != 0) && b == 0 {
                 ans_cand += 1;
                 if ans_cand >= 4 {
                     break;
@@ -244,11 +247,12 @@ impl Board4 {
         i = 1;
         b = 0;
         loop {
-            if (r as i32) - (i as i32) < 0 || (self.get_pos(r-i, c) & self.cur_player != 0) { //3-player is the other player
+            if (r as i32) - (i as i32) < 0 || (self.get_pos(r - i, c) & self.cur_player != 0) {
+                //3-player is the other player
                 break;
             }
 
-            if (self.get_pos(r-i, c) & prev != 0) && b == 0 {
+            if (self.get_pos(r - i, c) & prev != 0) && b == 0 {
                 ans_cand += 1;
                 if ans_cand >= 4 {
                     break;
@@ -272,7 +276,7 @@ impl Board4 {
             }
         }
         if ans >= 4 {
-            return (ans,1);
+            return (ans, 1);
         }
 
         buffer = 0;
@@ -282,11 +286,12 @@ impl Board4 {
 
         //pos diag
         loop {
-            if r+i >= 6 || c+i >= 7 || (self.get_pos(r+i, c+i) & self.cur_player != 0) { //3-player is the other player
+            if r + i >= 6 || c + i >= 7 || (self.get_pos(r + i, c + i) & self.cur_player != 0) {
+                //3-player is the other player
                 break;
             }
 
-            if (self.get_pos(r+i, c+i) & prev != 0) && b == 0 {
+            if (self.get_pos(r + i, c + i) & prev != 0) && b == 0 {
                 ans_cand += 1;
                 if ans_cand >= 4 {
                     break;
@@ -303,11 +308,15 @@ impl Board4 {
         i = 1;
         b = 0;
         loop {
-            if (r as i32) - (i as i32) < 0 || (c as i32) - (i as i32) < 0 || (self.get_pos(r-i, c-i) & self.cur_player != 0) { //3-player is the other player
+            if (r as i32) - (i as i32) < 0
+                || (c as i32) - (i as i32) < 0
+                || (self.get_pos(r - i, c - i) & self.cur_player != 0)
+            {
+                //3-player is the other player
                 break;
             }
 
-            if (self.get_pos(r-i, c-i) & prev != 0) && b == 0 {
+            if (self.get_pos(r - i, c - i) & prev != 0) && b == 0 {
                 ans_cand += 1;
                 if ans_cand >= 4 {
                     break;
@@ -331,7 +340,7 @@ impl Board4 {
             }
         }
         if ans >= 4 {
-            return (ans,1);
+            return (ans, 1);
         }
 
         buffer = 0;
@@ -341,11 +350,15 @@ impl Board4 {
 
         //neg diag
         loop {
-            if r+i >= 6 || (c as i32) - (i as i32) < 0 || (self.get_pos(r+i, c-i) & self.cur_player != 0) { //3-player is the other player
+            if r + i >= 6
+                || (c as i32) - (i as i32) < 0
+                || (self.get_pos(r + i, c - i) & self.cur_player != 0)
+            {
+                //3-player is the other player
                 break;
             }
 
-            if (self.get_pos(r+i, c-i) & prev != 0) && b == 0 {
+            if (self.get_pos(r + i, c - i) & prev != 0) && b == 0 {
                 ans_cand += 1;
                 if ans_cand >= 4 {
                     break;
@@ -362,11 +375,15 @@ impl Board4 {
         i = 1;
         b = 0;
         loop {
-            if (r as i32) - (i as i32) < 0 || c+i >= 7 || (self.get_pos(r-i, c+i) & self.cur_player != 0) { //3-player is the other player
+            if (r as i32) - (i as i32) < 0
+                || c + i >= 7
+                || (self.get_pos(r - i, c + i) & self.cur_player != 0)
+            {
+                //3-player is the other player
                 break;
             }
 
-            if (self.get_pos(r-i, c+i) & prev != 0) && b == 0 {
+            if (self.get_pos(r - i, c + i) & prev != 0) && b == 0 {
                 ans_cand += 1;
                 if ans_cand >= 4 {
                     break;
@@ -420,7 +437,7 @@ impl Board4 {
         }
 
         for r in (0..6).rev() {
-            print!("{} ",r);
+            print!("{} ", r);
             for c in 0..7 {
                 print!("{} ", board[r][c]);
             }
@@ -431,9 +448,17 @@ impl Board4 {
             print!("{} ", i);
         }
         println!("");
-    }  
+    }
 
-    fn minimax(&mut self, depth: u32, isMaximizer: i32, mut alpha: i32, mut beta: i32, revs: &mut u64, table: &mut Vec<(u64,i32)>) -> i32 {     
+    fn minimax(
+        &mut self,
+        depth: u32,
+        is_maximizer: i32,
+        mut alpha: i32,
+        mut beta: i32,
+        revs: &mut u64,
+        table: &mut Vec<(u64, i32)>,
+    ) -> i32 {
         *revs += 1;
 
         let table_val = table[(self.get_key() % 10000000) as usize];
@@ -441,13 +466,13 @@ impl Board4 {
             return table_val.1;
         }
 
-        if depth == 0 {           
+        if depth == 0 {
             return 0;
         }
 
-        static MOVE_ORDERING : [usize; 7] = [3,2,4,1,5,0,6];
+        static MOVE_ORDERING: [usize; 7] = [3, 2, 4, 1, 5, 0, 6];
         let mut final_order = Vec::with_capacity(7);
-        let mut center_heuristic : i32 = 6;
+        let mut center_heuristic: i32 = 6;
         for i in MOVE_ORDERING {
             if self.column_is_full(i) {
                 continue;
@@ -457,8 +482,8 @@ impl Board4 {
             b.place_token(i);
             let p = b.detect_sequence(i);
             if p.0 >= 4 {
-                table[(self.get_key() % 10000000) as usize] = (self.get_key(), 100*isMaximizer);
-                return 100*isMaximizer;
+                table[(self.get_key() % 10000000) as usize] = (self.get_key(), 100 * is_maximizer);
+                return 100 * is_maximizer;
             }
             if b.board_is_full() {
                 return 0;
@@ -469,7 +494,7 @@ impl Board4 {
         }
         sort_tuples(&mut final_order);
 
-        let mut bestVal = -100*isMaximizer;
+        let mut best_val = -100 * is_maximizer;
         for i in final_order {
             let mut b = self.copy();
 
@@ -491,35 +516,42 @@ impl Board4 {
                 continue;
             }
 
-            if isMaximizer == 1 {
-                bestVal = max(bestVal, b.minimax(depth-1, -1, alpha, beta, revs, table));
-                alpha = max(alpha, bestVal);
+            if is_maximizer == 1 {
+                best_val = max(best_val, b.minimax(depth - 1, -1, alpha, beta, revs, table));
+                alpha = max(alpha, best_val);
             } else {
-                bestVal = min(bestVal, b.minimax(depth-1, 1, alpha, beta, revs, table));
-                beta = min(beta, bestVal);
+                best_val = min(best_val, b.minimax(depth - 1, 1, alpha, beta, revs, table));
+                beta = min(beta, best_val);
             }
-                        
+
             if beta <= alpha {
                 break;
             }
         }
 
-        if bestVal != 0 {
-            table[(self.get_key() % 10000000) as usize] = (self.get_key(), bestVal);
+        if best_val != 0 {
+            table[(self.get_key() % 10000000) as usize] = (self.get_key(), best_val);
         }
 
-        bestVal
+        best_val
     }
 
-    fn minimax_driver(&mut self, depth: u32, mut alpha: i32, beta: i32, revs: &mut u64, table: &mut Vec<(u64,i32)>) -> usize {
+    fn minimax_driver(
+        &mut self,
+        depth: u32,
+        mut alpha: i32,
+        beta: i32,
+        revs: &mut u64,
+        table: &mut Vec<(u64, i32)>,
+    ) -> usize {
         *revs += 1;
-        let mut bestVal = -100;
+        let mut best_val = -100;
         let mut col = 0;
         let mut free_col = 0;
-        static MOVE_ORDERING : [usize; 7] = [3,2,4,1,5,0,6];
+        static MOVE_ORDERING: [usize; 7] = [3, 2, 4, 1, 5, 0, 6];
 
         let mut final_order = Vec::with_capacity(7);
-        let mut center_heuristic : i32 = 6;
+        let mut center_heuristic: i32 = 6;
         for i in MOVE_ORDERING {
             if self.column_is_full(i) {
                 continue;
@@ -561,13 +593,13 @@ impl Board4 {
                 continue;
             }
 
-            let value = b.minimax(depth-1, -1, alpha, beta, revs, table);
-            if value > bestVal {
+            let value = b.minimax(depth - 1, -1, alpha, beta, revs, table);
+            if value > best_val {
                 col = i.3;
-                bestVal = value;
+                best_val = value;
             }
-            alpha = max(alpha, bestVal);
-            
+            alpha = max(alpha, best_val);
+
             if beta <= alpha {
                 break;
             }
@@ -581,12 +613,12 @@ impl Board4 {
     }
 }
 
-fn test_bot4(depth: u32) {
+pub fn test_bot4(depth: u32) {
     let mut table = vec![(0 as u64, 0 as i32); 10000000];
 
     let mut b = Board4 {
         cur_player: 0,
-        non_empty: 0
+        non_empty: 0,
     };
     b.debug_print('X', 'O');
     let mut winner = 'X';
@@ -594,7 +626,7 @@ fn test_bot4(depth: u32) {
         println!("Player turn: ");
 
         let mut valid_index: bool = false;
-        let mut col : i32 = 0;
+        let mut col: i32 = 0;
 
         while !valid_index {
             let mut inp_c = String::new();
@@ -621,24 +653,28 @@ fn test_bot4(depth: u32) {
             winner = 'X';
             break;
         }
-        
-        let mut revs : u64 = 0;
+
+        let mut revs: u64 = 0;
         let start = Instant::now();
         let bot_move = b.minimax_driver(depth, -100, 100, &mut revs, &mut table);
         let end = Instant::now();
         let d = end - start;
-        println!("Bot speed: {:?} @ {} states/s", d, (revs as f64 / (d.as_secs() as f64 + d.subsec_nanos() as f64 * 1e-9)).floor());
+        println!(
+            "Bot speed: {:?} @ {} states/s",
+            d,
+            (revs as f64 / (d.as_secs() as f64 + d.subsec_nanos() as f64 * 1e-9)).floor()
+        );
         println!("Bot move: {}", bot_move);
         b.place_token(bot_move);
         b.debug_print('X', 'O');
         winner = 'O';
     }
-    
+
     if b.detect_win() {
         println!("Winner is player {}!", winner);
     } else {
         println!("Game ended in tie.");
-    }  
+    }
 }
 
 fn test_bot42(depth: u32) {
@@ -646,17 +682,21 @@ fn test_bot42(depth: u32) {
 
     let mut b = Board4 {
         cur_player: 0,
-        non_empty: 0
+        non_empty: 0,
     };
     b.debug_print('X', 'O');
     let mut winner = 'X';
     while !b.detect_win() && !b.board_is_full() {
-        let mut revs : u64 = 0;
+        let mut revs: u64 = 0;
         let start = Instant::now();
         let bot_move = b.minimax_driver(depth, -100, 100, &mut revs, &mut table);
         let end = Instant::now();
         let d = end - start;
-        println!("Bot speed: {:?} @ {} states/s", d, (revs as f64 / (d.as_secs() as f64 + d.subsec_nanos() as f64 * 1e-9)).floor());
+        println!(
+            "Bot speed: {:?} @ {} states/s",
+            d,
+            (revs as f64 / (d.as_secs() as f64 + d.subsec_nanos() as f64 * 1e-9)).floor()
+        );
         println!("Bot move: {}", bot_move);
         b.place_token(bot_move);
         b.debug_print('O', 'X');
@@ -668,7 +708,7 @@ fn test_bot42(depth: u32) {
         println!("Player turn: ");
 
         let mut valid_index: bool = false;
-        let mut col : i32 = 0;
+        let mut col: i32 = 0;
 
         while !valid_index {
             let mut inp_c = String::new();
@@ -689,11 +729,10 @@ fn test_bot42(depth: u32) {
         b.debug_print('X', 'O');
         winner = 'O';
     }
-    
+
     if b.detect_win() {
         println!("Winner is player {}!", winner);
     } else {
         println!("Game ended in tie.");
-    }  
+    }
 }
-
